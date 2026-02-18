@@ -1,0 +1,6 @@
+{
+  "model": "RandomForest",
+  "auc": 0.8388,
+  "sensitivity": 0.5652,
+  "trained": "2026-02-17"
+}
