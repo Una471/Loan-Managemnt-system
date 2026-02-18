@@ -46,7 +46,7 @@ section[data-testid="stSidebar"]{background:#0a2a44!important;border-right:1px s
 section[data-testid="stSidebar"] *{color:#f1f5f9!important;}
 section[data-testid="stSidebar"] .stSelectbox label{color:#e2e8f0!important;}
 .stTextInput input,.stNumberInput input,.stSelectbox select{background:#1e293b!important;color:white!important;border:1px solid #334155!important;}
-.stTextInput label,.stNumberInput label,.stSelectbox label{color:#e2e8f0!important;}
+.stTextInput label,.stNumberInput label,.stSelectbox label{color:#030203!important;}
 .stButton>button{background:#3b82f6;color:white;border:none;border-radius:8px;padding:.6rem 1.5rem;font-weight:600;width:100%;}
 .stButton>button:hover{background:#2563eb;}
 .st-bb{background-color:transparent;}
