@@ -45,9 +45,14 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif;background:#0f172a;color
 section[data-testid="stSidebar"]{background:#0a2a44!important;border-right:1px solid #1e3a5f;}
 section[data-testid="stSidebar"] *{color:#f1f5f9!important;}
 section[data-testid="stSidebar"] .stSelectbox label{color:#e2e8f0!important;}
-.stTextInput input,.stNumberInput input,.stSelectbox select{background:#1e293b!important;color:white!important;border:1px solid #334155!important;}
-.stTextInput label,.stNumberInput label,.stSelectbox label{color:#030203!important;}
-.stButton>button{background:#3b82f6;color:white;border:none;border-radius:8px;padding:.6rem 1.5rem;font-weight:600;width:100%;}
+.stTextInput input,.stNumberInput input{background:#1e293b!important;color:white!important;border:1px solid #334155!important;}
+.stTextInput label,.stNumberInput label,.stSelectbox label,.stTextArea label{color:#030203!important;}
+.stSelectbox div[data-baseweb="select"]>div{background:#1e293b!important;color:white!important;}
+.stSelectbox div[data-baseweb="select"] li[role="option"]{background:#1e293b!important;color:white!important;}
+.stSelectbox div[data-baseweb="select"] li[role="option"]:hover{background:#334155!important;}
+.stTextArea textarea{background:#1e293b!important;color:white!important;border:1px solid #334155!important;}
+input,textarea,select,[contenteditable="true"],div[role="textbox"]{caret-color:white!important;}
+.stButton>button{background:#3b82f6;color:white;border:none;border-radius:8px;padding:.6rem 1.5rem;font-weight:600;width:100%;cursor:pointer;}
 .stButton>button:hover{background:#2563eb;}
 .st-bb{background-color:transparent;}
 .st-cb{color:#f1f5f9;}
