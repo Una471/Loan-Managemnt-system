@@ -271,7 +271,7 @@ if nav == "Screen application":
                     return f'<div style="background:#f7f7f9;border-radius:16px;padding:1rem;margin:.3rem 0;border-left:5px solid {color};color:#0b0b14;"><b style="color:{color}">{label}</b><br><span style="font-size:1.1rem;font-weight:800;color:#0b0b14;">{value}</span></div>'
             else:
                 numeric_value = value
-            
+
             if higher_is_better:
                 color = "#22c55e" if numeric_value >= good else "#f97316" if numeric_value >= warning else "#ef4444"
             else:
