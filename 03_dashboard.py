@@ -1,407 +1,246 @@
-"""
-THEBE CREDIT UNION — LOAN PORTFOLIO DASHBOARD
-Simple report for branch managers and executives.
-Run: streamlit run 03_dashboard.py --server.port 8501
-"""
+
+PAGE_TITLE="Thebe Credit Union | Portfolio Analytics"
+ACCENT="#0d5a47"; ACCENT_DARK="#073e31"; ACCENT2="#3f6f92"; SOFT="#e8f2ee"
+OVERVIEW_URL="https://una471.github.io/portfolio/projects/loan/overview.html"; OVERVIEW_LABEL="Portfolio Overview"; SOFTWARE_URL="https://loan-management-automation.streamlit.app/?view=software"; 
+HERO_IMAGE="screenshots/loan-ui.png"; SEARCH_TEXT="Search customers, branches, loan types or reports..."
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from pathlib import Path
+import base64
 
-st.set_page_config(page_title="Thebe Credit Union | Dashboard", page_icon="🏦", layout="wide")
+ROOT = Path(__file__).resolve().parent
+st.set_page_config(page_title=PAGE_TITLE, page_icon=None, layout="wide", initial_sidebar_state="expanded")
 
-st.markdown("""
+def _img_data(name):
+    p = ROOT / "assets" / name
+    if not p.exists():
+        return ""
+    mime = "image/webp" if p.suffix.lower()==".webp" else "image/png"
+    return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
+
+HERO = _img_data(HERO_IMAGE)
+
+STYLE = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif;background:#f8fafc;color:#0f172a;}
-.topbar{background:linear-gradient(135deg,#0a2a44,#1e4a6f);color:white;padding:1.4rem 2rem;border-radius:12px;margin-bottom:1.5rem;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
-.topbar h1{margin:0;font-size:1.5rem;font-weight:700;color:white;}
-.topbar p{margin:.3rem 0 0;opacity:.9;font-size:.85rem;color:#e2e8f0;}
-.kcard{background:white;border-radius:12px;padding:1.2rem 1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:5px solid #e0e0e0;margin-bottom:.3rem;color:#0f172a;}
-.kcard.red{border-left-color:#b91c1c;} .kcard.orange{border-left-color:#c2410c;}
-.kcard.green{border-left-color:#166534;} .kcard.blue{border-left-color:#1e4a6f;}
-.kval{font-size:1.9rem;font-weight:700;line-height:1.1;color:#0f172a;}
-.klbl{font-size:.72rem;text-transform:uppercase;letter-spacing:1.5px;color:#1e4a6f;margin-top:.3rem;font-weight:700;}
-.ksub{font-size:.78rem;color:#334155;margin-top:.3rem;}
-.ccard{background:white;border-radius:12px;padding:1.2rem 1.4rem;box-shadow:0 2px 8px rgba(0,0,0,.07);margin-bottom:1rem;color:#0f172a;}
-.ctitle{font-size:.95rem;font-weight:700;color:#0f172a;margin-bottom:.2rem;}
-.csub{font-size:.78rem;color:#334155;margin-bottom:.7rem;}
-/* Enhanced contrast for insight boxes */
-.ar{background:#fee2e2;border:1px solid #b91c1c;border-radius:8px;padding:.9rem;margin-bottom:.5rem;color:#7f1d1d;}
-.ao{background:#ffedd5;border:1px solid #c2410c;border-radius:8px;padding:.9rem;margin-bottom:.5rem;color:#7b341e;}
-.ag{background:#dcfce7;border:1px solid #166534;border-radius:8px;padding:.9rem;margin-bottom:.5rem;color:#14532d;}
-.ar b, .ao b, .ag b {color:#0f172a !important;}
-.ar, .ao, .ag {font-weight:500;}
-section[data-testid="stSidebar"]{background:#0a2a44!important;}
-section[data-testid="stSidebar"] *{color:white!important;}
-section[data-testid="stSidebar"] .stSelectbox label{color:#e2e8f0!important;}
-.st-bb{background-color:transparent;}
-#MainMenu,footer,header{visibility:hidden;}
-div[data-testid="stDataFrame"]{color:#0f172a;}
-.stDataFrame {color:#0f172a;}
+:root{{--bg:#e7e8ea;--shell:#f7f7f6;--panel:#fff;--line:#e7e7e5;--ink:#2d2e30;--muted:#85888d;--accent:{ACCENT};--accent2:{ACCENT2};--soft:{SOFT};--danger:#d75555;--warn:#c88a32;--good:#16865c;}}
+html,body,[class*="css"],.stApp{{font-family:"Segoe UI Variable","Segoe UI",Arial,sans-serif!important;color:var(--ink)!important}}
+.stApp{{background:var(--bg)!important}}
+header[data-testid="stHeader"]{{display:none!important}} #MainMenu,footer,[data-testid="stToolbar"]{{display:none!important}}
+.block-container{{max-width:1480px!important;margin:18px auto!important;padding:14px 18px 24px!important;background:var(--shell)!important;border:1px solid #d9d9da!important;border-radius:22px!important;box-shadow:0 2px 10px rgba(40,40,45,.06)!important}}
+section[data-testid="stSidebar"]{{width:248px!important;background:#f5f5f4!important;border-right:1px solid #dededc!important}}
+section[data-testid="stSidebar"]>div{{padding:26px 16px 18px!important}}
+section[data-testid="stSidebar"] h2{{font-size:1.02rem!important;margin:.2rem 8px .1rem!important;letter-spacing:-.02em!important}}
+section[data-testid="stSidebar"] .stCaption,section[data-testid="stSidebar"] p{{font-size:.71rem!important;color:#85888b!important}}
+section[data-testid="stSidebar"] hr{{border:0!important;border-top:1px solid #ddd!important;margin:1rem 8px!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"]{{gap:.05rem!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label{{min-height:38px!important;padding:.56rem .78rem!important;border-radius:8px!important;margin:0!important;background:transparent!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label>div:first-child{{display:none!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label p{{font-size:.76rem!important;color:#74777a!important;font-weight:500!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){{background:var(--soft)!important;box-shadow:inset 3px 0 0 var(--accent)!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p{{color:#252726!important;font-weight:700!important}}
+section[data-testid="stSidebar"] [data-baseweb="select"]>div{{min-height:39px!important;background:#fff!important;border:1px solid #dededc!important;border-radius:9px!important}}
+section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] p{{font-size:.68rem!important;color:#85888b!important;font-weight:500!important}}
+.utilitybar{{height:58px;display:flex;align-items:center;gap:12px;background:#f0f0ef;border:1px solid #ededeb;border-radius:14px;padding:8px 12px;margin:0 0 10px}}
+.searchbox{{width:min(340px,42vw);height:38px;background:#fff;border:1px solid #ececea;border-radius:20px;color:#999b9d;font-size:.72rem;display:flex;align-items:center;padding:0 14px}}
+.searchbox:before{{content:'⌕';font-size:1.03rem;color:#717476;margin-right:8px}} .utility-spacer{{flex:1}} .utility-icon{{width:36px;height:36px;background:#fff;border:1px solid #ececea;border-radius:50%;display:grid;place-items:center;color:#6e7270;font-size:.72rem}} .user-chip{{display:flex;align-items:center;gap:8px}} .avatar{{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;font-size:.66rem;font-weight:700}} .user-name{{font-size:.72rem;font-weight:700;color:#2f3130}} .user-role{{font-size:.61rem;color:#949695;margin-top:3px}}
+.hero{{position:relative;min-height:110px;overflow:hidden;border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:10px;padding:18px 20px}} .hero:after{{content:'';position:absolute;inset:0 0 0 52%;background-image:linear-gradient(90deg,rgba(255,255,255,.98),rgba(255,255,255,.35)),url('{HERO}');background-size:cover;background-position:center;opacity:.42}} .hero>*{{position:relative;z-index:1}} .hero h1{{font-size:1.48rem!important;line-height:1.05!important;letter-spacing:-.035em!important;margin:0!important;color:#2c2e2f!important}} .hero p{{font-size:.74rem!important;color:#85888b!important;margin:.45rem 0 0!important;max-width:670px;line-height:1.35}}
+.section-title{{font-size:.82rem;font-weight:700;color:#343637;margin:.2rem 0 .6rem}} .kcard{{height:112px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:.9rem .9rem .75rem;display:flex;flex-direction:column}} .kcard.primary{{background:linear-gradient(145deg,{ACCENT_DARK},{ACCENT});border-color:{ACCENT};}} .klabel{{font-size:.68rem;font-weight:700;color:#3d3f40;line-height:1.15;min-height:26px}} .kcard.primary .klabel{{color:#e8f6f0}} .kvalue{{font-size:1.72rem;font-weight:700;letter-spacing:-.045em;line-height:1;margin-top:.35rem;color:#292b2c;white-space:nowrap}} .kcard.primary .kvalue{{color:#fff}} .ksub{{font-size:.62rem;color:#16865c;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}} .kcard.primary .ksub{{color:#d8f5e8}}
+.panel-title{{font-size:.79rem;font-weight:700;color:#343637;margin:0 0 .1rem}} .panel-sub{{font-size:.63rem;color:#949698;margin:0 0 .35rem}}
+[data-testid="stPlotlyChart"]{{background:#fff!important;border:1px solid var(--line)!important;border-radius:14px!important;padding:.35rem .45rem .2rem!important;box-shadow:none!important}}
+[data-testid="stDataFrame"],[data-testid="stTable"]{{border:1px solid var(--line)!important;border-radius:12px!important;overflow:hidden!important;background:#fff!important}}
+div[data-testid="stVerticalBlock"]{{gap:.58rem!important}} div[data-testid="stHorizontalBlock"]{{gap:.65rem!important}}
+.stButton>button{{height:34px!important;border-radius:18px!important;border:1px solid var(--accent)!important;background:#fff!important;color:var(--accent)!important;font-size:.69rem!important;font-weight:650!important}}
+.side-promo{{height:160px;margin:1rem .1rem 0;border-radius:13px;padding:1rem;display:flex;align-items:flex-end;background:linear-gradient(180deg,rgba(15,25,20,.1),rgba(15,25,20,.72)),url('{HERO}');background-size:cover;background-position:center;color:#fff}} .side-promo strong{{display:block;font-size:.9rem;line-height:1.14;margin-bottom:.4rem;color:#fff}} .side-promo span{{font-size:.63rem;color:#e5eee9;line-height:1.3}}
+.small-note{{font-size:.64rem;color:#8f9294}} .status-pill{{display:inline-block;padding:.16rem .48rem;border-radius:999px;background:#edf6f1;color:#1a7655;font-size:.62rem;font-weight:700}}
+@media(max-width:1000px){{.block-container{{margin:0!important;border-radius:0!important;padding:10px!important}}section[data-testid="stSidebar"]{{width:232px!important}}.hero:after{{display:none}}.kvalue{{font-size:1.45rem}}}}
+.sidebar-brand{{display:flex;align-items:center;gap:10px;margin:0 4px 18px;padding:0 4px 17px;border-bottom:1px solid #d9d9d7}}
+.sidebar-brand>span{{display:grid;width:36px;height:36px;place-items:center;border-radius:7px;background:var(--accent);color:#fff;font-size:.66rem;font-weight:800;letter-spacing:.02em}}
+.sidebar-brand strong{{display:block;color:var(--ink);font-size:.88rem;line-height:1.15}}
+.sidebar-brand small{{display:block;margin-top:3px;color:var(--muted);font-size:.61rem}}
+div[data-testid="stTextInput"]{{max-width:520px}}
+div[data-testid="stTextInput"] input{{height:38px!important;border:1px solid #ececea!important;border-radius:20px!important;background:#fff!important;color:var(--ink)!important;font-size:.72rem!important}}
+div[data-testid="stTextInput"] input:focus{{border-color:var(--accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)!important}}
+.profile-chip{{height:40px;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-right:4px}}
+.profile-chip>span{{display:grid;width:31px;height:31px;place-items:center;border-radius:50%;background:var(--accent);color:#fff;font-size:.61rem;font-weight:800}}
+.profile-chip strong{{display:block;font-size:.65rem;color:var(--ink)}}
+.profile-chip small{{display:block;margin-top:2px;font-size:.57rem;color:var(--muted)}}
+/* Cohesive project-specific dashboard finish */
+.stApp{{background:color-mix(in srgb,var(--soft) 46%,#dfe3e5)!important}}
+.block-container{{background:color-mix(in srgb,var(--soft) 28%,#f7f7f6)!important;border-color:color-mix(in srgb,var(--accent) 12%,#d9d9da)!important}}
+section[data-testid="stSidebar"]{{background:color-mix(in srgb,var(--soft) 72%,#f4f4f2)!important;border-right-color:color-mix(in srgb,var(--accent) 14%,#d8d8d6)!important}}
+section[data-testid="stSidebar"] [data-baseweb="select"]>div{{background:color-mix(in srgb,var(--soft) 35%,#fff)!important;border-color:color-mix(in srgb,var(--accent) 18%,#d7d7d5)!important;color:var(--ink)!important}}
+section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] p{{color:color-mix(in srgb,var(--ink) 70%,var(--muted))!important;font-weight:650!important}}
+.hero{{min-height:126px!important;background-image:linear-gradient(90deg,rgba(18,23,22,.86),rgba(18,23,22,.62) 52%,rgba(18,23,22,.25)),url('{HERO}')!important;background-size:cover!important;background-position:center!important;border-color:color-mix(in srgb,var(--accent) 18%,#d6d6d4)!important}}
+.hero:after{{display:none!important}}
+.hero h1{{color:#fff!important;text-shadow:0 1px 8px rgba(0,0,0,.24)}}
+.hero p{{color:rgba(255,255,255,.88)!important}}
+.kcard,.kcard.primary{{height:108px!important;background:color-mix(in srgb,var(--soft) 24%,#fff)!important;border:1px solid color-mix(in srgb,var(--accent) 15%,#dededc)!important;border-top:3px solid color-mix(in srgb,var(--accent) 72%,#fff)!important}}
+.kcard.primary .klabel,.kcard .klabel{{color:color-mix(in srgb,var(--ink) 82%,var(--accent))!important}}
+.kcard.primary .kvalue,.kcard .kvalue{{color:var(--ink)!important}}
+.kcard.primary .ksub,.kcard .ksub{{color:color-mix(in srgb,var(--accent) 68%,var(--muted))!important}}
+[data-testid="stPlotlyChart"]{{background:color-mix(in srgb,var(--soft) 15%,#fff)!important;border-color:color-mix(in srgb,var(--accent) 12%,#dededc)!important}}
+[data-testid="stDataFrame"],[data-testid="stTable"]{{background:color-mix(in srgb,var(--soft) 15%,#fff)!important;border-color:color-mix(in srgb,var(--accent) 12%,#dededc)!important}}
+.panel-title{{margin:.48rem 0 .08rem!important;color:var(--ink)!important}}
+.panel-sub{{margin:0 0 .42rem!important;color:var(--muted)!important}}
+.modebar{{display:none!important}}
+.side-promo{{display:none!important}}
+.sidebar-brand{{border-bottom-color:color-mix(in srgb,var(--accent) 18%,#d7d7d5)!important}}
+.sidebar-brand>span{{background:transparent!important;color:var(--accent)!important;width:38px;height:38px;border-radius:0!important}}
+.sidebar-brand.health>span{{position:relative;font-size:0}}
+.sidebar-brand.health>span:before,.sidebar-brand.health>span:after{{content:'';position:absolute;width:19px;height:28px;border-radius:100% 0 100% 0;background:var(--accent);transform:rotate(-35deg);left:3px;top:5px}}
+.sidebar-brand.health>span:after{{left:16px;transform:scaleX(-1) rotate(-35deg);background:var(--accent2)}}
+.sidebar-brand.mining>span{{font-size:0;border-left:3px solid var(--accent2)!important;transform:skewX(-12deg);position:relative}}
+.sidebar-brand.mining>span:before{{content:'≡';font-size:2rem;font-weight:900;line-height:1;color:var(--accent2);position:absolute;left:6px;top:0}}
+.sidebar-brand.loan>span{{border:2px solid var(--accent)!important;border-radius:50%!important;font-size:.58rem!important;font-weight:800!important}}
+.sidebar-brand.retail>span{{display:none!important}}
+.sidebar-brand.retail strong{{font-weight:850!important;letter-spacing:.07em!important;text-transform:uppercase}}
+.sidebar-brand.tourism>span{{display:none!important}}
+.sidebar-brand.tourism>div{{border-left:4px solid var(--accent2);padding-left:10px}}
+/* Image-backed navigation and high-contrast light report */
+section[data-testid="stSidebar"]>div:first-child{{min-height:100vh!important;padding:10px 14px 18px!important;background-image:linear-gradient(rgba(12,22,20,.78),rgba(12,22,20,.88)),url('{HERO}')!important;background-size:cover!important;background-position:center!important}}
+section[data-testid="stSidebar"] h1,section[data-testid="stSidebar"] h2,section[data-testid="stSidebar"] h3,section[data-testid="stSidebar"] p,section[data-testid="stSidebar"] .stCaption{{color:rgba(255,255,255,.88)!important}}
+section[data-testid="stSidebar"] hr{{border-top-color:rgba(255,255,255,.22)!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label p{{color:rgba(255,255,255,.76)!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:hover{{background:rgba(255,255,255,.10)!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){{background:rgba(255,255,255,.16)!important;box-shadow:inset 3px 0 0 color-mix(in srgb,var(--accent2) 70%,#fff)!important}}
+section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) p{{color:#fff!important}}
+section[data-testid="stSidebar"] [data-baseweb="select"]>div{{background:rgba(255,255,255,.92)!important;border-color:rgba(255,255,255,.34)!important;color:#202523!important}}
+section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] p{{color:#fff!important}}
+.sidebar-brand{{margin:0 2px 12px!important;padding:0 2px 12px!important;border-bottom-color:rgba(255,255,255,.24)!important}}
+.sidebar-brand strong{{color:#fff!important;text-shadow:0 1px 6px rgba(0,0,0,.35)}}
+.sidebar-brand small{{color:rgba(255,255,255,.72)!important}}
+.sidebar-brand>span{{color:#fff!important}}
+.sidebar-brand.loan>span{{border-color:#fff!important}}
+.sidebar-brand.health>span:before{{background:#fff!important}}
+.sidebar-brand.health>span:after{{background:color-mix(in srgb,var(--accent2) 72%,#fff)!important}}
+.sidebar-brand.mining>span{{border-left-color:var(--accent2)!important}}
+section[data-testid="stSidebarCollapseButton"] button{{color:#fff!important;background:rgba(0,0,0,.18)!important}}
+.kcard,.kcard.primary{{border:0!important;border-top:0!important;background:linear-gradient(140deg,color-mix(in srgb,var(--accent) 88%,#21302b),color-mix(in srgb,var(--accent2) 62%,var(--accent)))!important;box-shadow:0 3px 10px rgba(24,34,31,.12)!important}}
+.kcard .klabel,.kcard.primary .klabel{{color:rgba(255,255,255,.84)!important}}
+.kcard .kvalue,.kcard.primary .kvalue{{color:#fff!important;text-shadow:0 1px 5px rgba(0,0,0,.18)}}
+.kcard .ksub,.kcard.primary .ksub{{color:rgba(255,255,255,.76)!important}}
+[data-testid="stPlotlyChart"]{{background:#fff!important;border:1px solid color-mix(in srgb,var(--accent) 10%,#d9dddb)!important}}
+[data-testid="stDataFrame"]{{background:#fff!important;border:1px solid color-mix(in srgb,var(--accent) 12%,#d5d9d7)!important}}
+[data-testid="stDataFrame"] button{{color:#26312c!important}}
+/* Exact software-brand lockup and sidebar action */
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{{padding-top:0!important}}
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]{{padding-top:8px!important}}
+.sidebar-brand{{margin-top:0!important;align-items:center!important}}
+.sidebar-brand.loan>span{{display:none!important}}
+.sidebar-brand.loan strong{{font-weight:780!important;letter-spacing:-.02em}}
+.sidebar-brand.retail strong{{font-weight:900!important;letter-spacing:.09em!important}}
+.sidebar-brand.tourism strong{{letter-spacing:-.025em!important}}
+.sidebar-brand.mining>span:before{{content:''!important;position:absolute!important;left:7px!important;top:7px!important;width:28px!important;height:3px!important;background:var(--accent2)!important;box-shadow:-2px 9px 0 var(--accent2),-5px 18px 0 var(--accent2)!important}}
+section[data-testid="stSidebar"] .stLinkButton a{{min-height:38px!important;border:1px solid rgba(255,255,255,.55)!important;background:rgba(255,255,255,.15)!important;color:#fff!important;border-radius:7px!important;font-weight:750!important}}
+section[data-testid="stSidebar"] .stLinkButton a:hover{{background:#fff!important;color:var(--accent)!important}}
+/* Top-aligned identity and report actions */
+.sidebar-brand{{position:relative!important;left:-24px!important;top:-6px!important;width:calc(100% + 24px)!important;margin-bottom:2px!important;padding:8px 0 12px 8px!important}}
+.report-actions-spacer{{flex:1}}
+div[data-testid="stHorizontalBlock"]:has(#top_overview){{margin:0 0 .1rem!important}}
+.stButton>button,.stLinkButton>a{{font-weight:700!important}}
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(STYLE, unsafe_allow_html=True)
 
-@st.cache_data
-def load():
-    return pd.read_csv("loan_data_scored.csv", parse_dates=["disburse_date"])
+def kcard(label, value, sub="", primary=False):
+    return f'<div class="kcard {"primary" if primary else ""}"><div class="klabel">{label}</div><div class="kvalue">{value}</div><div class="ksub">{sub}</div></div>'
 
-df = load()
+def sidebar_brand(mark, name, tag):
+    st.markdown(f'<div class="sidebar-brand {mark.lower()}"><span>{mark}</span><div><strong>{name}</strong><small>{tag}</small></div></div>', unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown("### 🏦 Thebe Credit Union")
-    st.markdown("Loan Portfolio Dashboard")
-    st.markdown("---")
-    page = st.radio("Go to", [
-        "📋  Portfolio Overview",
-        "⚠️  At-Risk Accounts",
-        "💸  Losses & Collections",
-        "🏢  Branch Performance",
-        "👤  Customer Insights",
-    ])
-    st.markdown("---")
-    branches = ["All Branches"] + sorted(df["branch"].unique().tolist())
-    sel_b    = st.selectbox("Filter: Branch", branches)
-    ltypes   = ["All Loan Types"] + sorted(df["loan_type"].unique().tolist())
-    sel_l    = st.selectbox("Filter: Loan Type", ltypes)
-    st.markdown("---")
-    st.caption("Period: Jan 2024 – Jun 2025")
+def _open_overview():
+    st.session_state["active_report_page"] = OVERVIEW_LABEL
 
-dff = df.copy()
-if sel_b != "All Branches":   dff = dff[dff["branch"]    == sel_b]
-if sel_l != "All Loan Types": dff = dff[dff["loan_type"] == sel_l]
+def _open_section():
+    selected = st.session_state.get("section_nav")
+    if selected:
+        st.session_state["active_report_page"] = selected
 
-def kcard(color, val, lbl, sub=""):
-    return f'<div class="kcard {color}"><div class="kval">{val}</div><div class="klbl">{lbl}</div>{"<div class=ksub>"+sub+"</div>" if sub else ""}</div>'
+def sidebar_navigation(options):
+    st.radio("Go to", options, index=None, key="section_nav", on_change=_open_section, label_visibility="collapsed")
+    return st.session_state.get("active_report_page", OVERVIEW_LABEL)
 
-def wchart(fig, h=340):
-    fig.update_layout(plot_bgcolor="white",paper_bgcolor="white",font_color="#0f172a",
-                      height=h,margin=dict(t=15,b=20,l=10,r=10), template="plotly_white")
+def utilitybar(role):
+    spacer, overview_col, software_col = st.columns([6, 1.05, 1.25])
+    with overview_col:
+        st.link_button("Overview", OVERVIEW_URL, use_container_width=True)
+    with software_col:
+        st.link_button("Open software", SOFTWARE_URL, use_container_width=True)
+    return ""
+
+def apply_search(frame, query):
+    if not query or frame.empty:
+        return frame
+    matches = frame.astype(str).apply(lambda column: column.str.contains(query, case=False, regex=False, na=False)).any(axis=1)
+    return frame.loc[matches]
+
+
+def hero(title, subtitle):
+    st.markdown(f'<div class="hero"><h1>{title}</h1><p>{subtitle}</p></div>', unsafe_allow_html=True)
+
+def panel_head(title, sub=""):
+    st.markdown(f'<div class="panel-title">{title}</div><div class="panel-sub">{sub}</div>', unsafe_allow_html=True)
+
+def chart_style(fig, height=270, legend=True):
+    fig.update_layout(height=height, margin=dict(l=12,r=12,t=22,b=10), paper_bgcolor="#ffffff", plot_bgcolor="#ffffff", font=dict(family="Segoe UI, Arial",size=11,color="#303634"), showlegend=legend, legend=dict(orientation="h",yanchor="bottom",y=1.01,xanchor="right",x=1,font=dict(size=9)), hoverlabel=dict(bgcolor="#2f3332",font=dict(color="#fff",size=10)), coloraxis_showscale=False)
+    fig.update_xaxes(showgrid=False,linecolor="#cfd5d2",tickfont=dict(size=10,color="#424946"),title_font=dict(size=9),zeroline=False)
+    fig.update_yaxes(gridcolor="#e2e6e4",linecolor="#cfd5d2",tickfont=dict(size=10,color="#424946"),title_font=dict(size=9),zeroline=False)
     return fig
 
-# ════════════════════════════════════════════════════════════════
-# PAGE 1 — PORTFOLIO OVERVIEW
-# ════════════════════════════════════════════════════════════════
-if page == "📋  Portfolio Overview":
-    st.markdown('<div class="topbar"><h1>🏦 Loan Portfolio Overview</h1><p>Thebe Credit Union &nbsp;·&nbsp; January 2024 – June 2025</p></div>', unsafe_allow_html=True)
+@st.cache_data
+def load_data():
+    p=ROOT/"loan_data_scored.csv"
+    d=pd.read_csv(p if p.exists() else ROOT/"loan_data.csv",parse_dates=['disburse_date']); return d
+loans=load_data()
+with st.sidebar:
+    sidebar_brand("TCU", "Thebe Credit Union", "Loan Management")
+    page=st.radio("Go to",["Portfolio Overview","At-Risk Accounts","Losses & Collections","Branches","Customer Insights"],index=0,label_visibility="collapsed")
+    st.divider(); branches=["All Branches"]+sorted(loans.branch.dropna().unique().tolist()); types=["All Loan Types"]+sorted(loans.loan_type.dropna().unique().tolist()); branch_sel=st.selectbox("Branch",branches,index=0); type_sel=st.selectbox("Loan Type",types,index=0)
+    st.divider(); st.caption("Portfolio: 2024 to 2025"); st.markdown('<div class="side-promo"><div><strong>Responsible lending. Stronger financial futures.</strong><span>Portfolio quality, collections and customer risk in one view.</span></div></div>',unsafe_allow_html=True)
+df=loans.copy()
+if branch_sel!="All Branches": df=df[df.branch==branch_sel]
+if type_sel!="All Loan Types": df=df[df.loan_type==type_sel]
+search_query=utilitybar("Credit Analyst")
+df=apply_search(df,search_query)
 
-    total_port  = dff["loan_amount_bwp"].sum()
-    outstanding = dff["outstanding_balance"].sum()
-    total_loss  = dff["expected_loss_bwp"].sum()
-    defaulted   = (dff["payment_status"]=="Defaulted").sum()
-    late        = (dff["payment_status"]=="Late (30–89 days)").sum()
-    current     = (dff["payment_status"]=="Current").sum()
+def money(x): return f"P{x/1e6:.1f}M" if abs(x)>=1e6 else f"P{x/1e3:.0f}K" if abs(x)>=1e3 else f"P{x:,.0f}"
 
-    c1,c2,c3,c4,c5 = st.columns(5)
-    c1.markdown(kcard("blue",  f"P{total_port/1e6:.1f}M",    "Total Portfolio",        f"{len(dff):,} loans"), unsafe_allow_html=True)
-    c2.markdown(kcard("blue",  f"P{outstanding/1e6:.1f}M",   "Outstanding Balance",    "Still owed by customers"), unsafe_allow_html=True)
-    c3.markdown(kcard("red",   f"P{total_loss/1e6:.2f}M",    "Estimated Financial Loss","At risk of not being recovered"), unsafe_allow_html=True)
-    c4.markdown(kcard("red",   f"{defaulted:,}",              "Defaulted Accounts",     "Stopped paying"), unsafe_allow_html=True)
-    c5.markdown(kcard("green", f"{current:,}",                "Paying on Time",         f"Out of {len(dff):,} total"), unsafe_allow_html=True)
+def overview():
+    hero("Loan Portfolio Overview","Track portfolio size, repayment quality, expected loss and customer risk across the credit union.")
+    portfolio=df.loan_amount_bwp.sum(); out=df.outstanding_balance.sum(); loss=df.expected_loss_bwp.sum(); defaults=int(df.will_default.sum()); default_rate=defaults/max(len(df),1)*100; customers=df.customer_id.nunique(); score=df.credit_score.mean()
+    cols=st.columns(7); vals=[("Total Portfolio",money(portfolio),f"{customers:,} customers"),("Outstanding",money(out),"Current balance"),("Expected Loss",money(loss),"Modelled exposure"),("Defaulted Accounts",f"{defaults:,}",f"{default_rate:.1f}% of accounts"),("Avg Credit Score",f"{score:.0f}","Selected portfolio"),("Avg Interest Rate",f"{df.interest_rate_pct.mean():.1f}%","Weighted by accounts"),("Avg Loan Size",money(df.loan_amount_bwp.mean()),"Per account")]
+    for i,v in enumerate(vals): cols[i].markdown(kcard(*v,primary=i==0),unsafe_allow_html=True)
+    c1,c2,c3=st.columns([1.2,1,1])
+    with c1:
+        panel_head("Loan Amount by Type","Portfolio composition"); q=df.groupby('loan_type').loan_amount_bwp.sum().sort_values().reset_index(); fig=px.bar(q,x='loan_amount_bwp',y='loan_type',orientation='h',color_discrete_sequence=[ACCENT]); st.plotly_chart(chart_style(fig,255,False),use_container_width=True)
+    with c2:
+        panel_head("Risk Distribution","Modelled customer risk");
+        if 'risk_level' in df.columns: q=df.risk_level.value_counts().reset_index(); q.columns=['risk_level','count']; fig=px.pie(q,names='risk_level',values='count',hole=.58,color='risk_level',color_discrete_map={'Low Risk':ACCENT,'Low':'#5a9b82','Medium':'#d4a35d','High':'#c6674d','Critical':'#9c3f3f'}); st.plotly_chart(chart_style(fig,255,False),use_container_width=True)
+        else: st.info("Risk-level field is not available in this file.")
+    with c3:
+        panel_head("Expected Loss by Branch","Where exposure is concentrated"); q=df.groupby('branch').expected_loss_bwp.sum().sort_values().reset_index(); fig=px.bar(q,x='expected_loss_bwp',y='branch',orientation='h',color_discrete_sequence=[ACCENT2]); st.plotly_chart(chart_style(fig,255,False),use_container_width=True)
+    st.markdown('<div class="section-title">Highest-Risk Accounts</div>',unsafe_allow_html=True)
+    cols=['customer_id','branch','loan_type','outstanding_balance','payment_status','days_late','expected_loss_bwp']; cols += ['risk_level'] if 'risk_level' in df.columns else []
+    q=df.sort_values('expected_loss_bwp',ascending=False)[cols].head(15); st.dataframe(q,use_container_width=True,hide_index=True,height=320)
 
-    st.markdown("---")
-    st.markdown("### 🔍 What This Report Found")
-    f1,f2,f3 = st.columns(3)
-    with f1: st.markdown(f'<div class="ar"><b>🔴 TOO MANY ACCOUNTS ARE FALLING BEHIND</b><br><br><b>{defaulted+late:,} customers</b> ({(defaulted+late)/len(dff)*100:.0f}% of all loans) are either fully defaulted or behind on payments. This is putting <b>P{total_loss/1e6:.1f}M</b> of the credit union\'s money at risk.</div>', unsafe_allow_html=True)
-    with f2: st.markdown('<div class="ao"><b>🟠 SOME LOAN TYPES ARE MUCH RISKIER THAN OTHERS</b><br><br>Not all loan types perform the same way. Some categories have far higher default rates than others. Tightening the requirements for the riskiest loan types could significantly reduce losses.</div>', unsafe_allow_html=True)
-    with f3: st.markdown('<div class="ao"><b>🟠 BRANCH PERFORMANCE VARIES SIGNIFICANTLY</b><br><br>Some branches have much higher default rates than others. This may reflect differences in how loan applications are being reviewed and approved, or differences in the local customer base.</div>', unsafe_allow_html=True)
+def risk_page():
+    hero("At-Risk Accounts","Focus collections and relationship management on customers with the highest expected loss and delinquency.")
+    cols=['customer_id','branch','loan_type','outstanding_balance','payment_status','days_late','missed_payments','expected_loss_bwp']; cols += ['risk_level'] if 'risk_level' in df.columns else []; st.dataframe(df.sort_values(['expected_loss_bwp','days_late'],ascending=False)[cols].head(50),use_container_width=True,hide_index=True,height=540)
 
-    st.markdown("---")
-    col1,col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="ccard"><div class="ctitle">Loan Account Status — All Customers</div><div class="csub">Breakdown of how customers are currently managing their repayments</div>', unsafe_allow_html=True)
-        status_c = dff["payment_status"].value_counts().reset_index()
-        status_c.columns = ["Status","Count"]
-        fig = px.pie(status_c, values="Count", names="Status", hole=0.45,
-                     color="Status",
-                     color_discrete_map={"Current":"#166534","Early (1–29 days)":"#b45309",
-                                         "Late (30–89 days)":"#c2410c","Defaulted":"#b91c1c"})
-        fig.update_traces(textinfo="percent+label", textfont_color="#0f172a")
-        st.plotly_chart(wchart(fig, 360), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+def losses_page():
+    hero("Losses & Collections","Track expected loss, late accounts and collection actions.")
+    q=df.groupby('collection_action').agg(accounts=('customer_id','count'),expected_loss=('expected_loss_bwp','sum'),outstanding=('outstanding_balance','sum')).reset_index(); st.dataframe(q,use_container_width=True,hide_index=True,height=420)
 
-    with col2:
-        st.markdown('<div class="ccard"><div class="ctitle">Default Rate by Loan Type</div><div class="csub">Which loan types are causing the most losses</div>', unsafe_allow_html=True)
-        lt = dff.groupby("loan_type").agg(
-            total=("customer_id","count"), defaults=("will_default","sum"),
-            loss=("expected_loss_bwp","sum")).reset_index()
-        lt["Default Rate %"] = (lt["defaults"]/lt["total"]*100).round(1)
-        lt = lt.sort_values("Default Rate %", ascending=True)
-        lt["label"] = lt["Default Rate %"].apply(lambda x: f"{x}%")
-        fig2 = px.bar(lt, x="Default Rate %", y="loan_type", orientation="h",
-                      color="Default Rate %", color_continuous_scale=["#166534","#b91c1c"],
-                      text="label", labels={"loan_type":""})
-        fig2.update_traces(textposition="outside", textfont_color="#0f172a")
-        fig2.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig2), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+def branch_page():
+    hero("Branch Performance","Compare portfolio size, expected loss and repayment risk by branch.")
+    q=df.groupby('branch').agg(accounts=('customer_id','count'),portfolio=('loan_amount_bwp','sum'),outstanding=('outstanding_balance','sum'),expected_loss=('expected_loss_bwp','sum'),defaults=('will_default','sum')).reset_index(); q['default_rate_pct']=q.defaults/q.accounts*100; st.dataframe(q,use_container_width=True,hide_index=True,height=500)
 
-# ════════════════════════════════════════════════════════════════
-# PAGE 2 — AT-RISK ACCOUNTS
-# ════════════════════════════════════════════════════════════════
-elif page == "⚠️  At-Risk Accounts":
-    st.markdown('<div class="topbar"><h1>⚠️ High-Risk Loan Accounts</h1><p>Accounts most likely to default — prioritise these for immediate contact</p></div>', unsafe_allow_html=True)
+def customer_page():
+    hero("Customer Insights","Explore income, credit quality, payment burden and loan characteristics.")
+    fig=px.scatter(df.sample(min(len(df),1200),random_state=7),x='monthly_income_bwp',y='loan_amount_bwp',color='will_default',opacity=.55,color_discrete_map={0:ACCENT,1:'#c65d51'}); st.plotly_chart(chart_style(fig,420),use_container_width=True)
 
-    rc = dff["risk_level"].value_counts()
-    c1,c2,c3,c4 = st.columns(4)
-    c1.markdown(kcard("red",    f"{rc.get('Critical',0):,}",    "Critical Risk",    "Needs urgent action now"), unsafe_allow_html=True)
-    c2.markdown(kcard("orange", f"{rc.get('High Risk',0):,}",   "High Risk",        "Contact this week"), unsafe_allow_html=True)
-    c3.markdown(kcard("blue",   f"{rc.get('Medium Risk',0):,}", "Medium Risk",      "Monitor closely"), unsafe_allow_html=True)
-    c4.markdown(kcard("green",  f"{rc.get('Low Risk',0):,}",    "Low Risk",         "Paying well"), unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### 📏 What Do the Risk Levels Mean?")
-    e1,e2,e3,e4 = st.columns(4)
-    with e1: st.markdown('<div class="ar"><b>🔴 CRITICAL</b><br>Very high chance of defaulting. Call this customer immediately. Consider restructuring the loan or demanding collateral.</div>', unsafe_allow_html=True)
-    with e2: st.markdown('<div class="ao"><b>🟠 HIGH RISK</b><br>Showing clear warning signs. Must be contacted this week. Early action now is far cheaper than chasing a default later.</div>', unsafe_allow_html=True)
-    with e3: st.markdown('<div class="ao"><b>🟡 MEDIUM</b><br>Some risk factors present. Monitor monthly. Send a friendly reminder SMS if payment is approaching.</div>', unsafe_allow_html=True)
-    with e4: st.markdown('<div class="ag"><b>🟢 LOW RISK</b><br>Paying reliably. No immediate action needed. Focus resources on the higher risk groups.</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    col1,col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="ccard"><div class="ctitle">Risk Level Distribution</div><div class="csub">How the full loan portfolio is spread across risk categories</div>', unsafe_allow_html=True)
-        fig = px.pie(names=rc.index, values=rc.values, hole=0.45,
-                     color=rc.index,
-                     color_discrete_map={"Critical":"#b91c1c","High Risk":"#c2410c",
-                                         "Medium Risk":"#b45309","Low Risk":"#166534"})
-        fig.update_traces(textinfo="percent+label", textfont_color="#0f172a")
-        st.plotly_chart(wchart(fig, 340), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        st.markdown('<div class="ccard"><div class="ctitle">What Puts a Customer at Risk?</div><div class="csub">The factors that separate customers who default from those who pay reliably</div>', unsafe_allow_html=True)
-        compare = pd.DataFrame({
-            "Factor":          ["Credit Score","Monthly Income (BWP)","Existing Loans","Previous Defaults","Employment Years"],
-            "Good Payers":     [dff[dff["will_default"]==0]["credit_score"].mean(),
-                                dff[dff["will_default"]==0]["monthly_income_bwp"].mean(),
-                                dff[dff["will_default"]==0]["existing_loans"].mean(),
-                                dff[dff["will_default"]==0]["prev_defaults"].mean(),
-                                dff[dff["will_default"]==0]["employment_tenure_yrs"].mean()],
-            "Defaulters":      [dff[dff["will_default"]==1]["credit_score"].mean(),
-                                dff[dff["will_default"]==1]["monthly_income_bwp"].mean(),
-                                dff[dff["will_default"]==1]["existing_loans"].mean(),
-                                dff[dff["will_default"]==1]["prev_defaults"].mean(),
-                                dff[dff["will_default"]==1]["employment_tenure_yrs"].mean()],
-        })
-        fig2 = go.Figure()
-        fig2.add_trace(go.Bar(name="Good Payers",x=compare["Factor"],y=compare["Good Payers"],marker_color="#166534"))
-        fig2.add_trace(go.Bar(name="Defaulters", x=compare["Factor"],y=compare["Defaulters"], marker_color="#b91c1c"))
-        fig2.update_layout(barmode="group",legend=dict(orientation="h",y=1.1), font_color="#0f172a")
-        st.plotly_chart(wchart(fig2), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### 🔴 Critical & High Risk Accounts — Needs Immediate Attention")
-    st.caption("These customers are most likely to default. Contact them now before the loan deteriorates further.")
-    urgent = dff[dff["risk_level"].isin(["Critical","High Risk"])].copy()
-    urgent = urgent.sort_values("default_probability", ascending=False)
-    urgent["default_probability"] = (urgent["default_probability"]*100).round(1)
-    urgent["outstanding_balance"] = urgent["outstanding_balance"].apply(lambda x: f"P{x:,.0f}")
-    urgent["monthly_income_bwp"]  = urgent["monthly_income_bwp"].apply(lambda x: f"P{x:,.0f}")
-    show = urgent[["customer_id","loan_type","branch","loan_officer","outstanding_balance",
-                   "monthly_income_bwp","days_late","risk_level","default_probability",
-                   "payment_status","collection_action"]].copy()
-    show.columns = ["Customer","Loan Type","Branch","Officer","Outstanding","Income",
-                    "Days Late","Risk","Default %","Status","Action Taken"]
-    st.dataframe(show.reset_index(drop=True), use_container_width=True)
-
-    csv = show.to_csv(index=False).encode()
-    st.download_button("📥 Export At-Risk List", csv, "at_risk_accounts.csv", "text/csv")
-
-# ════════════════════════════════════════════════════════════════
-# PAGE 3 — LOSSES & COLLECTIONS
-# ════════════════════════════════════════════════════════════════
-elif page == "💸  Losses & Collections":
-    st.markdown('<div class="topbar"><h1>💸 Financial Losses & Collections</h1><p>Where money is being lost and what collection steps have been taken</p></div>', unsafe_allow_html=True)
-
-    problem = dff[dff["payment_status"].isin(["Defaulted","Late (30–89 days)"])]
-    no_action = problem[problem["collection_action"]=="None"]
-
-    c1,c2,c3,c4 = st.columns(4)
-    c1.markdown(kcard("red",    f"P{dff['expected_loss_bwp'].sum()/1e6:.2f}M","Total Expected Loss",      "Across all at-risk accounts"), unsafe_allow_html=True)
-    c2.markdown(kcard("red",    f"{len(problem):,}",                           "Accounts Behind on Payment","Late or defaulted"), unsafe_allow_html=True)
-    c3.markdown(kcard("orange", f"{len(no_action):,}",                         "No Action Taken Yet",      "Late with zero follow-up"), unsafe_allow_html=True)
-    c4.markdown(kcard("blue",   f"P{dff[dff['payment_status']=='Defaulted']['expected_loss_bwp'].sum()/1e6:.2f}M","Loss from Full Defaults","Stopped paying entirely"), unsafe_allow_html=True)
-
-    st.markdown("---")
-    col1,col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="ccard"><div class="ctitle">Expected Loss by Loan Type</div><div class="csub">Which loan types are causing the biggest financial losses</div>', unsafe_allow_html=True)
-        loss_t = dff.groupby("loan_type")["expected_loss_bwp"].sum().sort_values(ascending=True).reset_index()
-        loss_t["label"] = loss_t["expected_loss_bwp"].apply(lambda x: f"P{x/1e3:.0f}K")
-        fig = px.bar(loss_t, x="expected_loss_bwp", y="loan_type", orientation="h",
-                     color="expected_loss_bwp", color_continuous_scale=["#fee2e2","#b91c1c"],
-                     text="label", labels={"expected_loss_bwp":"Loss (BWP)","loan_type":""})
-        fig.update_traces(textposition="outside", textfont_color="#0f172a"); fig.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        st.markdown('<div class="ccard"><div class="ctitle">Collection Actions Taken on Late Accounts</div><div class="csub">What steps have been taken to recover money from customers falling behind</div>', unsafe_allow_html=True)
-        ca = problem["collection_action"].value_counts().reset_index()
-        ca.columns = ["Action","Count"]
-        fig2 = px.bar(ca, x="Action", y="Count", text="Count",
-                      color="Action",
-                      color_discrete_map={"None":"#b91c1c","SMS Sent":"#1e4a6f",
-                                          "Called":"#2563eb","Letter Sent":"#3b82f6",
-                                          "Home Visit":"#1e3a8a","Legal Notice":"#422006"})
-        fig2.update_traces(textposition="outside", textfont_color="#0f172a"); fig2.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig2), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### 📋 Late Accounts With NO Collection Action")
-    st.caption("These customers are behind on payments and nobody has contacted them yet — priority for outreach")
-    if len(no_action) == 0:
-        st.success("✅ All late accounts have had at least one collection action.")
-    else:
-        show = no_action[["customer_id","loan_type","branch","loan_officer",
-                           "outstanding_balance","days_late","payment_status","expected_loss_bwp"]].copy()
-        show["outstanding_balance"] = show["outstanding_balance"].apply(lambda x:f"P{x:,.0f}")
-        show["expected_loss_bwp"]   = show["expected_loss_bwp"].apply(lambda x:f"P{x:,.0f}")
-        show.columns = ["Customer","Loan Type","Branch","Officer","Outstanding",
-                        "Days Late","Status","Expected Loss"]
-        st.dataframe(show.reset_index(drop=True), use_container_width=True)
-        csv = show.to_csv(index=False).encode()
-        st.download_button("📥 Export No-Action List", csv, "no_action_accounts.csv", "text/csv")
-    st.markdown('<div class="ar"><b>💡 Action Needed:</b> Every day a late account goes without contact, recovery becomes harder. Research shows that customers contacted within the first 30 days of being late are 3× more likely to catch up than those contacted after 90 days.</div>', unsafe_allow_html=True)
-
-# ════════════════════════════════════════════════════════════════
-# PAGE 4 — BRANCH PERFORMANCE
-# ════════════════════════════════════════════════════════════════
-elif page == "🏢  Branch Performance":
-    st.markdown('<div class="topbar"><h1>🏢 Branch Performance Report</h1><p>How each branch is performing on loan quality and defaults</p></div>', unsafe_allow_html=True)
-
-    br = dff.groupby("branch").agg(
-        loans=("customer_id","count"),
-        portfolio=("loan_amount_bwp","sum"),
-        defaults=("will_default","sum"),
-        losses=("expected_loss_bwp","sum"),
-        avg_credit=("credit_score","mean")
-    ).reset_index()
-    br["default_rate"]  = (br["defaults"]/br["loans"]*100).round(1)
-    br["loss_rate"]     = (br["losses"]/br["portfolio"]*100).round(2)
-    br = br.sort_values("default_rate", ascending=False)
-
-    best_br  = br.iloc[-1]
-    worst_br = br.iloc[0]
-
-    c1,c2,c3 = st.columns(3)
-    c1.markdown(kcard("blue",  f"{len(br)}",              "Total Branches",       ""), unsafe_allow_html=True)
-    c2.markdown(kcard("green", best_br["branch"],          "Best Performing",      f"{best_br['default_rate']}% default rate"), unsafe_allow_html=True)
-    c3.markdown(kcard("red",   worst_br["branch"],         "Needs Most Attention", f"{worst_br['default_rate']}% default rate"), unsafe_allow_html=True)
-
-    st.markdown("---")
-    col1,col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="ccard"><div class="ctitle">Default Rate by Branch</div><div class="csub">Percentage of loans that have defaulted or are seriously behind</div>', unsafe_allow_html=True)
-        br_s = br.sort_values("default_rate", ascending=True)
-        br_s["label"] = br_s["default_rate"].apply(lambda x:f"{x}%")
-        fig = px.bar(br_s, x="default_rate", y="branch", orientation="h",
-                     color="default_rate", color_continuous_scale=["#166534","#b91c1c"],
-                     text="label", labels={"default_rate":"Default Rate %","branch":""})
-        fig.update_traces(textposition="outside", textfont_color="#0f172a"); fig.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        st.markdown('<div class="ccard"><div class="ctitle">Portfolio Size vs Losses by Branch</div><div class="csub">Bigger portfolios are expected to have larger losses — the key is the proportion</div>', unsafe_allow_html=True)
-        fig2 = px.scatter(br, x="portfolio", y="losses", size="loans",
-                          color="default_rate", color_continuous_scale=["#166534","#b91c1c"],
-                          hover_name="branch", text="branch",
-                          labels={"portfolio":"Portfolio Value (BWP)","losses":"Expected Losses (BWP)",
-                                  "default_rate":"Default Rate %"})
-        fig2.update_traces(textposition="top center", textfont_color="#0f172a")
-        st.plotly_chart(wchart(fig2), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### 📋 Branch Summary Table")
-    br_show = br.copy()
-    br_show["portfolio"] = br_show["portfolio"].apply(lambda x:f"P{x/1e6:.2f}M")
-    br_show["losses"]    = br_show["losses"].apply(lambda x:f"P{x/1e3:.0f}K")
-    br_show["avg_credit"]= br_show["avg_credit"].apply(lambda x:f"{x:.0f}")
-    br_show.columns      = ["Branch","Loans","Portfolio","Defaults","Est. Losses",
-                             "Avg Credit Score","Default Rate %","Loss Rate %"]
-    st.dataframe(br_show.reset_index(drop=True), use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("### 👔 Loan Officer Default Rates")
-    st.caption("Officers with consistently high default rates may need additional training or supervision")
-    lo = dff.groupby("loan_officer").agg(
-        loans=("customer_id","count"), defaults=("will_default","sum"),
-        loss=("expected_loss_bwp","sum")).reset_index()
-    lo["default_rate"] = (lo["defaults"]/lo["loans"]*100).round(1)
-    lo = lo.sort_values("default_rate", ascending=False)
-    top10 = lo.head(10)
-    fig3 = px.bar(top10, x="loan_officer", y="default_rate",
-                  color="default_rate", color_continuous_scale=["#ffedd5","#b91c1c"],
-                  text=top10["default_rate"].apply(lambda x:f"{x}%"),
-                  labels={"default_rate":"Default Rate %","loan_officer":"Loan Officer"})
-    fig3.update_traces(textposition="outside", textfont_color="#0f172a"); fig3.update_layout(showlegend=False)
-    st.plotly_chart(wchart(fig3,320), use_container_width=True)
-
-# ════════════════════════════════════════════════════════════════
-# PAGE 5 — CUSTOMER INSIGHTS
-# ════════════════════════════════════════════════════════════════
-elif page == "👤  Customer Insights":
-    st.markdown('<div class="topbar"><h1>👤 Customer Profile Insights</h1><p>Understanding which types of customers carry the most risk</p></div>', unsafe_allow_html=True)
-
-    col1,col2 = st.columns(2)
-    with col1:
-        st.markdown('<div class="ccard"><div class="ctitle">Default Rate by Occupation</div><div class="csub">Which customer occupations carry the highest risk</div>', unsafe_allow_html=True)
-        occ = dff.groupby("occupation").agg(count=("customer_id","count"),defaults=("will_default","sum")).reset_index()
-        occ["Default Rate %"] = (occ["defaults"]/occ["count"]*100).round(1)
-        occ = occ.sort_values("Default Rate %", ascending=True)
-        fig = px.bar(occ, x="Default Rate %", y="occupation", orientation="h",
-                     color="Default Rate %", color_continuous_scale=["#166534","#b91c1c"],
-                     text=occ["Default Rate %"].apply(lambda x:f"{x}%"),
-                     labels={"occupation":""})
-        fig.update_traces(textposition="outside", textfont_color="#0f172a"); fig.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col2:
-        st.markdown('<div class="ccard"><div class="ctitle">Credit Score Distribution</div><div class="csub">Where our customers sit on the credit score scale — lower scores mean higher risk</div>', unsafe_allow_html=True)
-        fig2 = px.histogram(dff, x="credit_score", nbins=30, color="will_default",
-                            color_discrete_map={0:"#166534",1:"#b91c1c"},
-                            barmode="overlay", opacity=0.75,
-                            labels={"credit_score":"Credit Score","will_default":"Defaulted (1=Yes)"},
-                            category_orders={"will_default":[0,1]})
-        fig2.update_layout(legend=dict(orientation="h",y=1.1), font_color="#0f172a")
-        st.plotly_chart(wchart(fig2), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    col3,col4 = st.columns(2)
-    with col3:
-        st.markdown('<div class="ccard"><div class="ctitle">Income Level vs Default Rate</div><div class="csub">Lower-income customers are significantly more likely to default</div>', unsafe_allow_html=True)
-        dff["Income Group"] = pd.cut(dff["monthly_income_bwp"],
-            bins=[0,5000,10000,20000,50000,999999],
-            labels=["Under P5K","P5K–P10K","P10K–P20K","P20K–P50K","Over P50K"])
-        ig = dff.groupby("Income Group",observed=True).agg(count=("customer_id","count"),defaults=("will_default","sum")).reset_index()
-        ig["Default Rate %"] = (ig["defaults"]/ig["count"]*100).round(1)
-        fig3 = px.bar(ig, x="Income Group", y="Default Rate %",
-                      color="Default Rate %", color_continuous_scale=["#166534","#b91c1c"],
-                      text=ig["Default Rate %"].apply(lambda x:f"{x}%"))
-        fig3.update_traces(textposition="outside", textfont_color="#0f172a"); fig3.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig3), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col4:
-        st.markdown('<div class="ccard"><div class="ctitle">Does Collateral Reduce Default Risk?</div><div class="csub">Customers who offered collateral vs those who did not</div>', unsafe_allow_html=True)
-        coll = dff.groupby("has_collateral").agg(count=("customer_id","count"),defaults=("will_default","sum")).reset_index()
-        coll["has_collateral"] = coll["has_collateral"].map({1:"Has Collateral",0:"No Collateral"})
-        coll["Default Rate %"] = (coll["defaults"]/coll["count"]*100).round(1)
-        fig4 = px.bar(coll, x="has_collateral", y="Default Rate %",
-                      color="has_collateral",
-                      color_discrete_map={"Has Collateral":"#166534","No Collateral":"#b91c1c"},
-                      text=coll["Default Rate %"].apply(lambda x:f"{x}%"),
-                      labels={"has_collateral":""})
-        fig4.update_traces(textposition="outside", textfont_color="#0f172a"); fig4.update_layout(showlegend=False)
-        st.plotly_chart(wchart(fig4), use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("---")
-st.markdown("<div style='text-align:center;color:#475569;font-size:.78rem'>Thebe Credit Union · Loan Portfolio Dashboard · Prepared by Unaswi Leonard · 2026</div>", unsafe_allow_html=True)
+{"Portfolio Overview":overview,"At-Risk Accounts":risk_page,"Losses & Collections":losses_page,"Branches":branch_page,"Customer Insights":customer_page}[page]()
