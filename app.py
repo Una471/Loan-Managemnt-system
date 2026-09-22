@@ -3,7 +3,6 @@ import runpy
 import streamlit as st
 
 APP_DIR = Path(__file__).resolve().parent
-st.set_page_config(page_title="Thebe Credit Union | Loan Intelligence", layout="wide")
 
 view = st.query_params.get("view", "software")
 if isinstance(view, list):
@@ -12,6 +11,10 @@ view = "dashboard" if view == "dashboard" else "software"
 
 software_class = "active" if view == "software" else ""
 dashboard_class = "active" if view == "dashboard" else ""
+
+entrypoint = "03_dashboard.py" if view == "dashboard" else "04_software.py"
+runpy.run_path(str(APP_DIR / entrypoint), run_name="__main__")
+
 st.markdown(
     f'''<style>
     :root{{--suite-accent:#6C5CE7}}
@@ -27,6 +30,3 @@ st.markdown(
     </nav>''',
     unsafe_allow_html=True,
 )
-
-entrypoint = "03_dashboard.py" if view == "dashboard" else "04_software.py"
-runpy.run_path(str(APP_DIR / entrypoint), run_name="__main__")

@@ -7,6 +7,13 @@ Run: streamlit run 04_software.py --server.port 8502
 """
 
 import streamlit as st
+
+# Respect report links even when Streamlit Cloud starts this file directly.
+if st.query_params.get("view") == "dashboard":
+    import runpy
+    from pathlib import Path
+    runpy.run_path(str(Path(__file__).resolve().parent / "03_dashboard.py"), run_name="__main__")
+    st.stop()
 from pathlib import Path
 import pandas as pd
 import numpy as np
