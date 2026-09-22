@@ -14,17 +14,8 @@ if st.query_params.get("view") == "dashboard":
     from pathlib import Path
     runpy.run_path(str(Path(__file__).resolve().parent / "03_dashboard.py"), run_name="__main__")
     st.stop()
-# Show navigation when this software file is the Streamlit Cloud entry point.
-if not st.session_state.get("_suite_launcher", False):
-    st.markdown('''<style>
-    .suite-switch{position:fixed;top:.8rem;right:1.4rem;z-index:100000;display:flex;gap:3px;padding:4px;background:#15151e;border:1px solid #30303c;border-radius:7px}
-    .suite-switch a{display:block;padding:.48rem .75rem;border-radius:4px;color:#fff!important;text-decoration:none!important;font:650 .72rem "Segoe UI",sans-serif}
-    .suite-switch a:hover{background:#242430}
-    .suite-switch a.active{background:#6C5CE7;color:#111!important}
-    </style><nav class="suite-switch" aria-label="Project workspace">
-    <a class="active" href="?view=software" target="_self">Software</a>
-    <a href="?view=dashboard" target="_self">Dashboard</a>
-    </nav>''', unsafe_allow_html=True)
+with st.columns([5, 1])[1]:
+    st.link_button("Dashboard", "?view=dashboard", use_container_width=True)
 from pathlib import Path
 import pandas as pd
 import numpy as np
