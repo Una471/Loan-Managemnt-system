@@ -12,6 +12,7 @@ view = "dashboard" if view == "dashboard" else "software"
 software_class = "active" if view == "software" else ""
 dashboard_class = "active" if view == "dashboard" else ""
 
+st.session_state["_suite_launcher"] = True
 entrypoint = "03_dashboard.py" if view == "dashboard" else "04_software.py"
 runpy.run_path(str(APP_DIR / entrypoint), run_name="__main__")
 
